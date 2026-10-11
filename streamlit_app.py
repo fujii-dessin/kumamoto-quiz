@@ -32,6 +32,8 @@ answer は正解の番号（0〜3）です。"""
     response = requests.post(api_url, headers=headers, json=data, timeout=30)
     response.raise_for_status()
     text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    # ```json 〜 ``` で囲まれて返ってくることがあるので、{ から } までだけ取り出す
+    text = text[text.find("{") : text.rfind("}") + 1]
     return json.loads(text)
 
 
