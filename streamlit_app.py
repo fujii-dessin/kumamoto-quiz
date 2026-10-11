@@ -37,25 +37,50 @@ answer は正解の番号（0〜3）です。"""
     return json.loads(text)
 
 
-# 出した問題を覚えておく（ボタンを押すたびに画面が再読み込みされるため）
+# 問題・スコアを覚えておく（ボタンを押すたびに画面が再読み込みされるため）
 if "quiz" not in st.session_state:
-    st.session_state.quiz = None
+    st.session_state.quiz = None        # いま出ている問題
+    st.session_state.qno = 0            # 何問目か
+    st.session_state.answered = False   # 回答済みかどうか
+    st.session_state.correct = False    # 正解したかどうか
+    st.session_state.score = 0          # 正解数
+    st.session_state.total = 0          # 回答数
 
 if st.button("問題を出して！"):
     with st.spinner("問題を考え中..."):
         st.session_state.quiz = make_quiz()
+    st.session_state.qno += 1
+    st.session_state.answered = False
 
 quiz = st.session_state.quiz
 if quiz:
-    st.subheader(quiz["question"])
-    choice = st.radio("答えを選んでください", quiz["choices"], index=None)
+    st.subheader(f"第{st.session_state.qno}問")
+    st.write(quiz["question"])
+    # key を問題ごとに変えると、新しい問題で選択がリセットされる
+    choice = st.radio(
+        "答えを選んでください",
+        quiz["choices"],
+        index=None,
+        key=f"choice_{st.session_state.qno}",
+    )
 
-    if st.button("回答する"):
-        if choice is None:
-            st.warning("選択肢を選んでください。")
-        elif quiz["choices"].index(choice) == quiz["answer"]:
+    if not st.session_state.answered:
+        if st.button("回答する"):
+            if choice is None:
+                st.warning("選択肢を選んでください。")
+            else:
+                st.session_state.answered = True
+                st.session_state.total += 1
+                st.session_state.correct = quiz["choices"].index(choice) == quiz["answer"]
+                if st.session_state.correct:
+                    st.session_state.score += 1
+
+    if st.session_state.answered:
+        if st.session_state.correct:
             st.success("正解！🎉")
-            st.write(quiz["explanation"])
         else:
             st.error(f"残念… 正解は「{quiz['choices'][quiz['answer']]}」でした。")
-            st.write(quiz["explanation"])
+        st.write(quiz["explanation"])
+
+st.divider()
+st.write(f"スコア: **{st.session_state.score} / {st.session_state.total}** 問正解")
