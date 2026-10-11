@@ -54,19 +54,30 @@ answer は正解の番号（0〜3）です。"""
     text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
     # ```json 〜 ``` で囲まれて返ってくることがあるので、{ から } までだけ取り出す
     text = text[text.find("{") : text.rfind("}") + 1]
-    return json.loads(text)
+    quiz = json.loads(text)
+    # 形が崩れていたら（選択肢が4つない、正解番号が範囲外など）エラーにして出し直してもらう
+    if len(quiz["choices"]) != 4 or not (0 <= int(quiz["answer"]) <= 3):
+        raise ValueError("AI の返した問題の形式がおかしい")
+    quiz["answer"] = int(quiz["answer"])
+    return quiz
 
 
 # 問題・スコアを覚えておく（ボタンを押すたびに画面が再読み込みされるため）
-if "quiz" not in st.session_state:
-    st.session_state.quiz = None        # いま出ている問題
-    st.session_state.qno = 0            # 何問目か
-    st.session_state.answered = False   # 回答済みかどうか
-    st.session_state.correct = False    # 正解したかどうか
-    st.session_state.score = 0          # 正解数
-    st.session_state.total = 0          # 回答数
-    st.session_state.asked = []         # これまでに出した問題文
-    st.session_state.bad = []           # 「おかしい」と報告された問題文
+# 1つずつ「まだ無ければ作る」にしておくと、あとから項目を足しても
+# 開きっぱなしの画面でエラーにならない
+DEFAULTS = {
+    "quiz": None,       # いま出ている問題
+    "qno": 0,           # 何問目か
+    "answered": False,  # 回答済みかどうか
+    "correct": False,   # 正解したかどうか
+    "score": 0,         # 正解数
+    "total": 0,         # 回答数
+    "asked": [],        # これまでに出した問題文
+    "bad": [],          # 「おかしい」と報告された問題文
+}
+for key, value in DEFAULTS.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 if st.button("問題を出して！"):
     try:
