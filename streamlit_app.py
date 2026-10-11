@@ -18,7 +18,7 @@ def make_quiz(level):
     prompt = f"""あなたは熊本県のご当地クイズの出題者です。
 難易度「{level}」で、熊本の地理・歴史・グルメ・方言・観光から4択クイズを1問作ってください。
 次の JSON 形式だけを返してください。前後に説明文は書かないでください。
-{"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}
+{{"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}}
 answer は正解の番号（0〜3）です。"""
 
     api_url = "https://generativelanguage.googleapis.com/v1/models/gemini-3.8-flash:generateContent"
