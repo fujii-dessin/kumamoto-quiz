@@ -13,10 +13,10 @@ if not gemini_api_key:
     st.stop()
 
 
-def make_quiz():
+def make_quiz(level):
     """Gemini にクイズを1問作ってもらう"""
-    prompt = """あなたは熊本県のご当地クイズの出題者です。
-熊本の地理・歴史・グルメ・方言・観光から4択クイズを1問作ってください。
+    prompt = f"""あなたは熊本県のご当地クイズの出題者です。
+難易度「{level}」で、熊本の地理・歴史・グルメ・方言・観光から4択クイズを1問作ってください。
 次の JSON 形式だけを返してください。前後に説明文は書かないでください。
 {"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}
 answer は正解の番号（0〜3）です。"""
@@ -46,9 +46,11 @@ if "quiz" not in st.session_state:
     st.session_state.score = 0          # 正解数
     st.session_state.total = 0          # 回答数
 
+level = st.selectbox("難易度", ("観光客レベル", "県民レベル", "マニアレベル"))
+
 if st.button("問題を出して！"):
     with st.spinner("問題を考え中..."):
-        st.session_state.quiz = make_quiz()
+        st.session_state.quiz = make_quiz(level)
     st.session_state.qno += 1
     st.session_state.answered = False
 
