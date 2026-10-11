@@ -18,10 +18,11 @@ if not gemini_api_key:
 GENRES = ["地理", "歴史", "グルメ", "観光地", "祭り・イベント", "自然・温泉", "ゆるキャラ・名産品", "交通・鉄道"]
 
 
-def make_quiz(asked):
-    """Gemini にクイズを1問作ってもらう。asked はこれまでに出した問題文のリスト"""
+def make_quiz(asked, bad):
+    """Gemini にクイズを1問作ってもらう。asked は出題済みの問題文、bad は間違いだった問題文のリスト"""
     genre = random.choice(GENRES)
     asked_text = "\n".join(f"- {q}" for q in asked) if asked else "（まだありません）"
+    bad_text = "\n".join(f"- {q}" for q in bad) if bad else "（まだありません）"
     prompt = f"""あなたは熊本県のご当地クイズの出題者です。
 熊本の「{genre}」に関する4択クイズを1問作ってください。
 観光で熊本に来た人でも楽しめる、ほどよい難しさにしてください。
@@ -30,6 +31,9 @@ Wikipedia や観光サイトに載っているような、広く知られた事�
 
 これまでに出した問題（これらと同じ題材・似た問題は避けてください）:
 {asked_text}
+
+人間がチェックして「事実と違う」と判定した問題（これらと似た問題は絶対に出さないでください）:
+{bad_text}
 
 次の JSON 形式だけを返してください。前後に説明文は書かないでください。
 {{"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}}
@@ -62,11 +66,12 @@ if "quiz" not in st.session_state:
     st.session_state.score = 0          # 正解数
     st.session_state.total = 0          # 回答数
     st.session_state.asked = []         # これまでに出した問題文
+    st.session_state.bad = []           # 「おかしい」と報告された問題文
 
 if st.button("問題を出して！"):
     try:
         with st.spinner("問題を考え中..."):
-            st.session_state.quiz = make_quiz(st.session_state.asked)
+            st.session_state.quiz = make_quiz(st.session_state.asked, st.session_state.bad)
         st.session_state.asked.append(st.session_state.quiz["question"])
         st.session_state.qno += 1
         st.session_state.answered = False
@@ -104,6 +109,21 @@ if quiz:
         else:
             st.error(f"残念… 正解は「{quiz['choices'][quiz['answer']]}」でした。")
         st.write(quiz["explanation"])
+
+    # AI の問題が間違っていることがあるので、人間が指摘できるボタン
+    if st.button("🚫 この問題はおかしい"):
+        st.session_state.bad.append(quiz["question"])
+        if st.session_state.answered:
+            # 採点済みならスコアから取り消す
+            st.session_state.total -= 1
+            if st.session_state.correct:
+                st.session_state.score -= 1
+        st.session_state.quiz = None
+        st.session_state.answered = False
+        st.rerun()
+
+if st.session_state.bad:
+    st.info(f"おかしいと報告した問題: {len(st.session_state.bad)} 件（次からは似た問題を出さないように AI に伝えています）")
 
 st.divider()
 st.write(f"スコア: **{st.session_state.score} / {st.session_state.total}** 問正解")
