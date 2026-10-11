@@ -1,4 +1,5 @@
 import json
+import random
 import streamlit as st
 import requests
 
@@ -13,12 +14,22 @@ if not gemini_api_key:
     st.stop()
 
 
-def make_quiz(level):
-    """Gemini にクイズを1問作ってもらう"""
+# 出題ジャンル。毎回この中からランダムに1つ選ぶ（同じ問題ばかりにならないように）
+GENRES = ["地理", "歴史", "グルメ", "観光地", "祭り・イベント", "自然・温泉", "ゆるキャラ・名産品", "交通・鉄道"]
+
+
+def make_quiz(level, asked):
+    """Gemini にクイズを1問作ってもらう。asked はこれまでに出した問題文のリスト"""
+    genre = random.choice(GENRES)
+    asked_text = "\n".join(f"- {q}" for q in asked) if asked else "（まだありません）"
     prompt = f"""あなたは熊本県のご当地クイズの出題者です。
-難易度「{level}」で、熊本の地理・歴史・グルメ・観光から4択クイズを1問作ってください。
+難易度「{level}」で、熊本の「{genre}」に関する4択クイズを1問作ってください。
 Wikipedia や観光サイトに載っているような、広く知られた事実だけを問題にしてください。
 自信がない事柄や、熊本以外の県のことは使わないでください。
+
+これまでに出した問題（これらと同じ題材・似た問題は避けてください）:
+{asked_text}
+
 次の JSON 形式だけを返してください。前後に説明文は書かないでください。
 {{"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}}
 answer は正解の番号（0〜3）です。"""
@@ -30,6 +41,8 @@ answer は正解の番号（0〜3）です。"""
     }
     data = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        # 1.0 に近いほど毎回違う答えになりやすい
+        "generationConfig": {"temperature": 1.0},
     }
     response = requests.post(api_url, headers=headers, json=data, timeout=60)
     response.raise_for_status()
@@ -47,13 +60,15 @@ if "quiz" not in st.session_state:
     st.session_state.correct = False    # 正解したかどうか
     st.session_state.score = 0          # 正解数
     st.session_state.total = 0          # 回答数
+    st.session_state.asked = []         # これまでに出した問題文
 
 level = st.selectbox("難易度", ("観光客レベル", "県民レベル", "マニアレベル"))
 
 if st.button("問題を出して！"):
     try:
         with st.spinner("問題を考え中..."):
-            st.session_state.quiz = make_quiz(level)
+            st.session_state.quiz = make_quiz(level, st.session_state.asked)
+        st.session_state.asked.append(st.session_state.quiz["question"])
         st.session_state.qno += 1
         st.session_state.answered = False
     except Exception as e:
