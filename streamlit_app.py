@@ -21,7 +21,7 @@ def make_quiz(level):
 {{"question": "問題文", "choices": ["選択肢1", "選択肢2", "選択肢3", "選択肢4"], "answer": 0, "explanation": "解説"}}
 answer は正解の番号（0〜3）です。"""
 
-    api_url = "https://generativelanguage.googleapis.com/v1/models/gemini-3.8-flash:generateContent"
+    api_url = "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash-lite:generateContent"
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": gemini_api_key,
