@@ -29,7 +29,7 @@ answer は正解の番号（0〜3）です。"""
     data = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
     }
-    response = requests.post(api_url, headers=headers, json=data, timeout=30)
+    response = requests.post(api_url, headers=headers, json=data, timeout=60)
     response.raise_for_status()
     text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
     # ```json 〜 ``` で囲まれて返ってくることがあるので、{ から } までだけ取り出す
@@ -49,10 +49,15 @@ if "quiz" not in st.session_state:
 level = st.selectbox("難易度", ("観光客レベル", "県民レベル", "マニアレベル"))
 
 if st.button("問題を出して！"):
-    with st.spinner("問題を考え中..."):
-        st.session_state.quiz = make_quiz(level)
-    st.session_state.qno += 1
-    st.session_state.answered = False
+    try:
+        with st.spinner("問題を考え中..."):
+            st.session_state.quiz = make_quiz(level)
+        st.session_state.qno += 1
+        st.session_state.answered = False
+    except Exception as e:
+        # Gemini が混んでいて時間切れになったり、JSON がうまく読めなかったとき
+        st.error("問題を作れませんでした。もう一度「問題を出して！」を押してください。")
+        st.caption(f"エラー内容: {e}")
 
 quiz = st.session_state.quiz
 if quiz:
